@@ -198,6 +198,19 @@ legend{padding:0 6px}
 @keyframes grow{from{transform:scaleX(0)}}
 .step{animation:pop .5s ease-out backwards;animation-delay:calc(var(--i) * .14s)}
 @media (prefers-reduced-motion: reduce){.stage .wave,.st-q,.bar i,.step{animation:none}.st-b,.st-c,.st-lb,.st-lc,.st-boat1,.st-boat2,.stage .core,.st-la{transition:none!important}}
+.toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:linear-gradient(180deg,var(--hi),var(--gold));color:var(--btn-ink);font-weight:700;border-radius:999px;padding:4px 16px;font-size:.9rem;white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 8px 22px -10px var(--gold)}
+html.showing{overflow:hidden}
+.map.show{position:fixed;inset:0;z-index:50;border:0;border-radius:0}
+.map.show canvas{height:100%;cursor:default}
+.map.show .legend{display:none}
+.map.show .badge{top:auto;left:50%;bottom:8px;transform:translateX(-50%)}
+.showui{position:absolute;inset:0;pointer-events:none;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr auto;gap:8px;
+  padding:max(18px,env(safe-area-inset-top,0px)) max(22px,env(safe-area-inset-right,0px)) max(44px,env(safe-area-inset-bottom,0px)) max(22px,env(safe-area-inset-left,0px))}
+.showtop{display:flex;flex-direction:column;min-width:0}
+#showexit{pointer-events:auto;align-self:start;background:var(--surface)}
+.showcap{grid-column:1 / -1;grid-row:3;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+#showl1{font-family:var(--serif);font-weight:900;color:var(--hi);font-size:clamp(1.4rem,4.4vw,2.8rem);text-shadow:0 2px 18px var(--shadow);text-wrap:balance}
+#showl2{font-size:clamp(.95rem,2.1vw,1.35rem);max-width:42em;text-wrap:balance}
 .notice{border:1px dashed var(--gold);border-radius:12px;padding:8px 14px;color:var(--gold);font-size:.88rem;text-align:center;margin-block:-28px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
 .pop{animation:pop .35s ease-out}
@@ -269,7 +282,7 @@ legend{padding:0 6px}
     <div class="sec-head">
       <span class="eyebrow">即時人脈地圖</span>
       <h2 id="map-h">渡口星圖</h2>
-      <p class="muted">每盞燈是一個人，小船划向被幫助的人。點一盞燈看他的卡片。</p>
+      <p class="muted">點一盞燈看他的卡片。按住你自己的燈，拖到另一盞燈再放開，就能划船過去。</p>
     </div>
     <div class="hud" aria-live="polite">
       <div><b id="s-people">0</b><span>人已加入</span></div>
@@ -277,9 +290,16 @@ legend{padding:0 6px}
       <div><b id="s-open">0</b><span>人還在等擺渡人</span></div>
       <div><b id="s-thanks">0</b><span>次「謝謝你渡我」</span></div>
     </div>
-    <div class="map">
+    <div class="actions"><button type="button" class="btn-soft" id="showbtn">展演模式（全螢幕）</button></div>
+    <div class="map" id="mapbox">
       <canvas id="sky" tabindex="0" aria-label="人脈地圖。所有卡片的文字內容列在頁面下方。"></canvas>
       <span class="badge" id="demo-badge" hidden>示範資料，非真實使用者</span>
+      <div class="toast" id="maptoast" hidden></div>
+      <div class="showui" id="showui" hidden>
+        <div class="showtop"><span class="latin">The Ferryman · 擺渡人</span><span id="showstats" class="muted small"></span></div>
+        <button type="button" class="btn-soft" id="showexit">離開展演</button>
+        <div class="showcap"><p id="showl1"></p><p id="showl2" class="muted"></p></div>
+      </div>
       <div class="legend"><span><i style="background:var(--gold)"></i>你</span><span><i style="background:var(--pearl)"></i>其他人</span><span><i style="background:var(--hi)"></i>小船：幫助的方向</span></div>
     </div>
     <div id="nodeinfo"></div>
@@ -443,7 +463,7 @@ legend{padding:0 6px}
   var people = [], loaded = false, bootDone = false, formFilled = false, confirmRemove = false, saving = false, filterCat = "";
   var SITE = location.origin + location.pathname;
   var thanks = {}, thanksBusy = false, shareMode = "site", focusFor = "", lastG = { list: [], note: undefined }, shownLink = "";
-  var MIN = 3; // shared two-character fragments needed to count as a match
+  var MIN = 4; // shared two-character fragments needed to count as a match
   var CATS = ["升學與申請", "實習與求職", "轉換領域", "研究與論文", "創業與競賽", "技能自學", "社團與領導", "其他"];
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -495,7 +515,7 @@ legend{padding:0 6px}
       list.forEach(function(b){
         if (a === b) return;
         var m = bestPassed(a.stuck, b);
-        if (m.score >= MIN) out.push({ from: b.id, to: a.id });
+        if (m.score >= MIN) out.push({ from: b.id, to: a.id, text: m.text });
       });
     });
     return out;
@@ -726,11 +746,14 @@ legend{padding:0 6px}
   /* ---------- river map ---------- */
   var cv = $("sky"), ctx = cv.getContext("2d"), W = 0, H = 0, dpr = 1;
   var nodes = [], edges = [], selected = null, frame = 0, settle = 0;
+  var showMode = false, focusEdge = -1, showTimer = null, showIdx = 0, wasFs = false, drag = null, trips = [], pendingLaunch = false, toastTimer = null, suppressUntil = 0;
   var GOLD = "#D9A679", HI = "#FFF1DC", PEARL = "#D5DBE8", BRONZE = "#8A6238", INK = "#F6EDE0";
   function resize(){
     var r = cv.getBoundingClientRect();
     dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var oW = W, oH = H;
     W = Math.max(r.width, 10); H = Math.max(r.height, 10);
+    if (oW > 10 && oH > 10) nodes.forEach(function(n){ n.x *= W / oW; n.y *= H / oH; });
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     settle = 0;
     if (reduce) relax(260);
@@ -745,7 +768,7 @@ legend{padding:0 6px}
       return { id: p.id, p: p, x: o ? o.x : W / 2 + Math.cos(a) * rad, y: o ? o.y : H / 2 + Math.sin(a) * rad, vx: 0, vy: 0, born: o ? o.born : frame };
     });
     var byId = {}; nodes.forEach(function(n){ byId[n.id] = n; });
-    edges = linksOf(list).map(function(l){ return { a: byId[l.from], b: byId[l.to], ph: Math.random() }; }).filter(function(e){ return e.a && e.b; });
+    edges = linksOf(list).map(function(l){ return { a: byId[l.from], b: byId[l.to], ph: Math.random(), text: l.text }; }).filter(function(e){ return e.a && e.b; });
     if (selected && !byId[selected]){ selected = null; $("nodeinfo").textContent = ""; }
     var helped = {}; edges.forEach(function(e){ helped[e.b.id] = 1; });
     $("s-people").textContent = list.length;
@@ -777,9 +800,9 @@ legend{padding:0 6px}
       });
     }
   }
-  function boat(x, y, dir, tilt){
-    ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(dir, 1);
-    ctx.globalAlpha = 1; ctx.fillStyle = GOLD; ctx.shadowColor = GOLD; ctx.shadowBlur = 10;
+  function boat(x, y, dir, tilt, S){
+    ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(dir * S, S);
+    ctx.fillStyle = GOLD; ctx.shadowColor = GOLD; ctx.shadowBlur = 10;
     ctx.beginPath(); ctx.moveTo(-11, -2); ctx.quadraticCurveTo(0, 8, 12, -3); ctx.lineTo(8, 2); ctx.quadraticCurveTo(0, 6, -8, 2); ctx.closePath(); ctx.fill();
     ctx.shadowBlur = 0; ctx.strokeStyle = BRONZE; ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.moveTo(-3, -9); ctx.lineTo(-12, 5); ctx.stroke();           // the ferryman's pole
@@ -788,9 +811,23 @@ legend{padding:0 6px}
     ctx.beginPath(); ctx.arc(3, -10, 2.4, 0, 6.2832); ctx.fill();                    // lantern on the bow
     ctx.restore(); ctx.shadowBlur = 0;
   }
+  // Where a lantern is drawn: normally where it rests; a newly lit one floats in along the river first.
+  function place(n){
+    if (n.launch != null){
+      var t = (frame - n.launch) / 240;
+      if (t >= 1){ n.launch = null; n.born = frame; }
+      else {
+        var e = 1 - Math.pow(1 - t, 2), sx = -24, sy = H * 0.74;
+        n.dx = sx + (n.x - sx) * e; n.dy = sy + (n.y - sy) * e + Math.sin(t * 14) * 7 * (1 - t); n.lt = t; return;
+      }
+    }
+    n.dx = n.x; n.dy = n.y; n.lt = null;
+  }
   function draw(){
+    var S = showMode ? (W < 600 ? 1.15 : 1.7) : 1;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
+    nodes.forEach(place);
     var k, x, y, yy;
     ctx.lineWidth = 1;
     for (k = 0; k < 7; k++){
@@ -805,50 +842,171 @@ legend{padding:0 6px}
       ctx.strokeStyle = HI; ctx.globalAlpha = 0.42; ctx.stroke();
     }
     ctx.setLineDash([]);
-    edges.forEach(function(e){
-      var dx = e.b.x - e.a.x, dy = e.b.y - e.a.y;
-      var cx = (e.a.x + e.b.x) / 2 - dy * 0.18, cy = (e.a.y + e.b.y) / 2 + dx * 0.18;
-      ctx.strokeStyle = GOLD; ctx.globalAlpha = 0.4; ctx.lineWidth = 1.2; ctx.setLineDash([3, 6]);
-      ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.quadraticCurveTo(cx, cy, e.b.x, e.b.y); ctx.stroke();
-      ctx.setLineDash([]);
+    edges.forEach(function(e, i){
+      var hot = showMode && i === focusEdge, dim = showMode && focusEdge >= 0 && !hot;
+      var dx = e.b.dx - e.a.dx, dy = e.b.dy - e.a.dy;
+      var cx = (e.a.dx + e.b.dx) / 2 - dy * 0.18, cy = (e.a.dy + e.b.dy) / 2 + dx * 0.18;
+      ctx.strokeStyle = hot ? HI : GOLD; ctx.globalAlpha = hot ? 1 : dim ? 0.14 : 0.4; ctx.lineWidth = hot ? 2.6 : 1.2; ctx.setLineDash(hot ? [] : [3, 6]);
+      if (hot){ ctx.shadowColor = GOLD; ctx.shadowBlur = 14; }
+      ctx.beginPath(); ctx.moveTo(e.a.dx, e.a.dy); ctx.quadraticCurveTo(cx, cy, e.b.dx, e.b.dy); ctx.stroke();
+      ctx.setLineDash([]); ctx.shadowBlur = 0;
       var t = reduce ? 0.5 : (e.ph + frame * 0.0028) % 1, u = 1 - t;
-      var bx = u * u * e.a.x + 2 * u * t * cx + t * t * e.b.x, by = u * u * e.a.y + 2 * u * t * cy + t * t * e.b.y;
-      var tx = 2 * u * (cx - e.a.x) + 2 * t * (e.b.x - cx), ty = 2 * u * (cy - e.a.y) + 2 * t * (e.b.y - cy);
+      var bx = u * u * e.a.dx + 2 * u * t * cx + t * t * e.b.dx, by = u * u * e.a.dy + 2 * u * t * cy + t * t * e.b.dy;
+      var tx = 2 * u * (cx - e.a.dx) + 2 * t * (e.b.dx - cx), ty = 2 * u * (cy - e.a.dy) + 2 * t * (e.b.dy - cy);
       var dir = tx >= 0 ? 1 : -1, tilt = Math.max(-0.3, Math.min(0.3, Math.atan2(ty, Math.abs(tx)) * 0.4)) * dir;
-      var fade = Math.min(1, t * 8, (1 - t) * 8);
-      ctx.save(); ctx.globalAlpha = fade; boat(bx, by + (reduce ? 0 : Math.sin(frame * 0.06 + e.ph * 9) * 1.2), dir, tilt); ctx.restore();
+      ctx.globalAlpha = Math.min(1, t * 8, (1 - t) * 8) * (dim ? 0.25 : 1);
+      boat(bx, by + (reduce ? 0 : Math.sin(frame * 0.06 + e.ph * 9) * 1.2), dir, tilt, S * (hot ? 1.3 : 1));
     });
+    // crossings the viewer rowed by hand
+    trips = trips.filter(function(tr){ return frame - tr.start < 130; });
+    trips.forEach(function(tr){
+      var t = (frame - tr.start) / 130, e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      var px = tr.a.dx + (tr.b.dx - tr.a.dx) * e, py = tr.a.dy + (tr.b.dy - tr.a.dy) * e;
+      ctx.strokeStyle = HI; ctx.globalAlpha = 0.8 * (1 - t); ctx.lineWidth = 2; ctx.shadowColor = GOLD; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.moveTo(tr.a.dx, tr.a.dy); ctx.lineTo(px, py); ctx.stroke(); ctx.shadowBlur = 0;
+      ctx.globalAlpha = Math.min(1, (1 - t) * 6);
+      boat(px, py - 4, tr.b.dx >= tr.a.dx ? 1 : -1, 0, 1.5 * S);
+    });
+    if (drag){
+      ctx.strokeStyle = HI; ctx.globalAlpha = 0.9; ctx.lineWidth = 2; ctx.shadowColor = GOLD; ctx.shadowBlur = 12; ctx.setLineDash([6, 6]);
+      ctx.beginPath(); ctx.moveTo(drag.from.dx, drag.from.dy); ctx.lineTo(drag.x, drag.y); ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1; boat(drag.x, drag.y - 6, drag.x >= drag.from.dx ? 1 : -1, 0, 1.5);
+      if (drag.over){
+        ctx.strokeStyle = HI; ctx.lineWidth = 2; ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(drag.over.dx, drag.over.dy, 18 + Math.sin(frame * 0.2) * 2, 0, 6.2832); ctx.stroke();
+      }
+    }
     nodes.forEach(function(n){
-      var mine = n.id === myId, c = mine ? GOLD : PEARL, r = mine ? 9 : 6.5;
+      var mine = n.id === myId, c = mine ? GOLD : PEARL, r = (mine ? 9 : 6.5) * S;
       var wob = reduce ? 0 : Math.sin(frame * 0.05 + n.x * 0.05) * 1.5;
       ctx.fillStyle = c;
-      ctx.globalAlpha = 0.09; ctx.beginPath(); ctx.arc(n.x, n.y, r * 3.6, 0, 6.2832); ctx.fill();
-      ctx.globalAlpha = 0.15; ctx.beginPath(); ctx.arc(n.x, n.y, r * 2.1, 0, 6.2832); ctx.fill();
-      ctx.globalAlpha = 0.24; ctx.beginPath(); ctx.ellipse(n.x + wob, n.y + r + 36, 2.2, 13, 0, 0, 6.2832); ctx.fill();
-      ctx.globalAlpha = 0.12; ctx.beginPath(); ctx.ellipse(n.x - wob, n.y + r + 55, 1.6, 7, 0, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 0.09; ctx.beginPath(); ctx.arc(n.dx, n.dy, r * 3.6, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 0.15; ctx.beginPath(); ctx.arc(n.dx, n.dy, r * 2.1, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 0.24; ctx.beginPath(); ctx.ellipse(n.dx + wob, n.dy + r + 36 * S, 2.2 * S, 13 * S, 0, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 0.12; ctx.beginPath(); ctx.ellipse(n.dx - wob, n.dy + r + 55 * S, 1.6 * S, 7 * S, 0, 0, 6.2832); ctx.fill();
+      if (n.lt != null){                                   // sparks trailing a lantern as it floats in
+        ctx.fillStyle = HI;
+        for (var q = 1; q <= 7; q++){
+          ctx.globalAlpha = (1 - q / 8) * 0.8 * (1 - n.lt);
+          ctx.beginPath(); ctx.arc(n.dx - q * 11, n.dy + Math.sin(frame * 0.2 + q) * 5 + q * 1.5, 2.4 - q * 0.25, 0, 6.2832); ctx.fill();
+        }
+      }
     });
     ctx.globalAlpha = 1;
-    ctx.font = '500 12px "Noto Sans TC", sans-serif'; ctx.textAlign = "center";
+    ctx.font = "500 " + Math.round(12 * S) + 'px "Noto Sans TC", sans-serif'; ctx.textAlign = "center";
+    var hotE = showMode && focusEdge >= 0 ? edges[focusEdge] : null;
     nodes.forEach(function(n){
-      var mine = n.id === myId, c = mine ? GOLD : PEARL, r = mine ? 9 : 6.5, age = frame - n.born;
+      var mine = n.id === myId, c = mine ? GOLD : PEARL, r = (mine ? 9 : 6.5) * S, age = frame - n.born;
       if (!reduce && age < 60){
         ctx.strokeStyle = c; ctx.globalAlpha = 1 - age / 60; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(n.x, n.y, r + age * 0.7, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(n.dx, n.dy, r + age * 0.7, 0, 6.2832); ctx.stroke();
+        ctx.globalAlpha = (1 - age / 60) * 0.6; ctx.beginPath(); ctx.arc(n.dx, n.dy, r + age * 1.3, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
       }
       ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = 16;
-      ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 6.2832); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.beginPath(); ctx.arc(n.dx, n.dy, r, 0, 6.2832); ctx.fill(); ctx.shadowBlur = 0;
       ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9;
-      ctx.beginPath(); ctx.arc(n.x - r * 0.32, n.y - r * 0.36, r * 0.28, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
-      if (n.id === selected){
+      ctx.beginPath(); ctx.arc(n.dx - r * 0.32, n.dy - r * 0.36, r * 0.28, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
+      if (n.id === selected || (hotE && (hotE.a === n || hotE.b === n))){
         ctx.strokeStyle = HI; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(n.x, n.y, r + 5, 0, 6.2832); ctx.stroke();
+        ctx.beginPath(); ctx.arc(n.dx, n.dy, r + 5, 0, 6.2832); ctx.stroke();
       }
       ctx.fillStyle = INK;
-      ctx.fillText(n.p.nick + (mine ? "（你）" : ""), n.x, n.y + r + 16);
+      ctx.fillText(n.p.nick + (mine ? "（你）" : ""), n.dx, n.dy + r + 16 * S);
     });
   }
+  function toast(text){
+    var t = $("maptoast"); t.textContent = text; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.hidden = true; }, 3600);
+  }
+  function nodeAt(x, y, rad){
+    var hit = null, bd = rad;
+    nodes.forEach(function(n){ var d = Math.hypot(n.x - x, n.y - y); if (d < bd){ bd = d; hit = n; } });
+    return hit;
+  }
+  /* ---------- presentation mode ---------- */
+  function showStep(){
+    var l1 = "", l2 = "";
+    if (edges.length){
+      focusEdge = (focusEdge + 1) % edges.length;
+      var e = edges[focusEdge];
+      l1 = e.a.p.nick + " 可以渡 " + e.b.p.nick;
+      l2 = "做成過「" + e.text + "」，正好接上「" + e.b.p.stuck + "」";
+    } else {
+      focusEdge = -1;
+      var w = shown().filter(function(p){ return p.stuck; });
+      if (w.length){ var p = w[showIdx++ % w.length]; l1 = p.nick + " 還在等擺渡人"; l2 = "卡在「" + p.stuck + "」"; }
+    }
+    $("showl1").textContent = l1; $("showl2").textContent = l2;
+    $("showstats").textContent = $("s-people").textContent + " 人已加入 · " + $("s-links").textContent + " 組配對 · " + $("s-thanks").textContent + " 次道謝";
+    if (reduce) draw();
+  }
+  function setShow(on){
+    if (showMode === on) return;
+    showMode = on; drag = null; selected = null; $("nodeinfo").textContent = "";
+    $("mapbox").classList.toggle("show", on);
+    document.documentElement.classList.toggle("showing", on);
+    $("showui").hidden = !on;
+    clearInterval(showTimer); focusEdge = -1;
+    var de = document.documentElement, pr;
+    if (on){
+      showStep(); showTimer = setInterval(showStep, 4500);
+      try { pr = de.requestFullscreen && de.requestFullscreen(); if (pr && pr.catch) pr.catch(function(){}); } catch (e){}
+      $("showexit").focus();
+    } else {
+      wasFs = false;
+      try { if (document.fullscreenElement && document.exitFullscreen){ pr = document.exitFullscreen(); if (pr && pr.catch) pr.catch(function(){}); } } catch (e){}
+      $("showbtn").focus();
+    }
+  }
+  $("showbtn").addEventListener("click", function(){ setShow(true); });
+  $("showexit").addEventListener("click", function(){ setShow(false); });
+  document.addEventListener("keydown", function(ev){ if (ev.key === "Escape" && showMode) setShow(false); });
+  document.addEventListener("fullscreenchange", function(){
+    if (document.fullscreenElement) wasFs = true; else if (wasFs && showMode) setShow(false);
+  });
+  /* ---------- rowing by hand: drag from your lantern to another ---------- */
+  function ptr(ev){ var r = cv.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
+  cv.addEventListener("touchstart", function(ev){
+    if (showMode || !ev.touches.length) return;
+    var r = cv.getBoundingClientRect(), n = nodeAt(ev.touches[0].clientX - r.left, ev.touches[0].clientY - r.top, 30);
+    if (n && n.id === myId) ev.preventDefault();          // keep the page from scrolling while rowing
+  }, { passive: false });
+  cv.addEventListener("pointerdown", function(ev){
+    if (showMode) return;
+    var p = ptr(ev), n = nodeAt(p.x, p.y, 30);
+    if (n && n.id === myId){
+      drag = { from: n, x: p.x, y: p.y, sx: p.x, sy: p.y, over: null, moved: false };
+      try { cv.setPointerCapture(ev.pointerId); } catch (e){}
+    }
+  });
+  cv.addEventListener("pointermove", function(ev){
+    if (!drag) return;
+    var p = ptr(ev), o = nodeAt(p.x, p.y, 34);
+    drag.x = p.x; drag.y = p.y;
+    if (Math.hypot(p.x - drag.sx, p.y - drag.sy) > 10) drag.moved = true;
+    drag.over = o && o !== drag.from ? o : null;
+    if (reduce) draw();
+  });
+  function endDrag(){
+    if (!drag) return;
+    var d = drag; drag = null; suppressUntil = Date.now() + 400;
+    if (d.over){
+      if (!reduce) trips.push({ a: d.from, b: d.over, start: frame });
+      selected = d.over.id; focusFor = "-"; renderNodeInfo();
+      toast("你划向了 " + d.over.p.nick + " 的渡口");
+    } else if (!d.moved){
+      selected = d.from.id; focusFor = "-"; renderNodeInfo();
+    }
+    if (reduce) draw();
+  }
+  cv.addEventListener("pointerup", endDrag);
+  cv.addEventListener("pointercancel", function(){ drag = null; });
   function tick(){
     frame++;
+    if (pendingLaunch){
+      var mn = nodes.filter(function(n){ return n.id === myId; })[0], rr = cv.getBoundingClientRect();
+      if (mn && rr.top < window.innerHeight * 0.7 && rr.bottom > 80){ mn.launch = frame; pendingLaunch = false; toast("你的燈亮了"); }
+    }
     if (!document.hidden){
       if (settle < 600){ relax(1); settle++; }
       draw();
@@ -856,6 +1014,7 @@ legend{padding:0 6px}
     requestAnimationFrame(tick);
   }
   cv.addEventListener("click", function(ev){
+    if (showMode || Date.now() < suppressUntil) return;
     var r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, hit = null, bd = 28;
     nodes.forEach(function(n){ var d = Math.hypot(n.x - x, n.y - y); if (d < bd){ bd = d; hit = n; } });
     selected = hit ? hit.id : null;
@@ -915,6 +1074,8 @@ legend{padding:0 6px}
     saving = true; $("save").disabled = true; setStatus("formstatus", "儲存中…");
     db.doc("people/" + myId).set(data).then(function(){
       formFilled = true; setStatus("formstatus", "已儲存。你的燈已經亮在星圖上，接著可以做第 2 步。");
+      pendingLaunch = !reduce;
+      $("map").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
     }).catch(function(err){
       setStatus("formstatus", err && err.code === "not_granted" ? "你在這個頁面只有檢視權限，無法儲存卡片。請頁面擁有者開放互動權限。" : "沒有存成功，請稍後再按一次。", true);
     }).then(function(){ saving = false; $("save").disabled = false; });
@@ -1019,7 +1180,10 @@ legend{padding:0 6px}
           var to = (d.data() || {}).to, seen = {};
           t[d.id] = (Array.isArray(to) ? to : []).filter(function(x){ if (typeof x !== "string" || seen[x]) return false; seen[x] = 1; return true; }).slice(0, 50);
         });
-        thanks = t; renderAll();
+        var before = {}; nodes.forEach(function(n){ before[n.id] = ferried(n.id); });
+        thanks = t;
+        nodes.forEach(function(n){ if (ferried(n.id) > before[n.id]) n.born = frame; });   // a ripple on the lantern that was thanked
+        renderAll();
       }, function(){});
       renderAll();
     });
