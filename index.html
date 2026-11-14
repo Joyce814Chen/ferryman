@@ -166,7 +166,39 @@ legend{padding:0 6px}
 .qr{background:var(--hi);border-radius:14px;padding:12px;width:204px;max-width:100%;box-shadow:0 0 40px -12px var(--gold)}
 .qr canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
 .sharecol{display:flex;flex-direction:column;gap:12px;width:100%}
-.notice{border:1px dashed var(--gold);border-radius:12px;padding:10px 14px;color:var(--gold);font-size:.9rem;text-align:center;margin-top:-28px}
+.story{border:1px solid var(--line);border-radius:20px;overflow:hidden;background:radial-gradient(ellipse at 50% 0%,#2A1F15 0%,var(--surface) 50%,#020201 100%);box-shadow:inset 0 1px 0 var(--sheen),0 26px 50px -30px var(--shadow)}
+.stage{display:block;width:100%;height:auto;max-height:420px}
+.stage text{fill:var(--ink);font-family:var(--body);font-size:15px;font-weight:500}
+.stage text.sub{fill:var(--muted);font-size:12.5px;font-weight:400}
+.stage .wave{fill:none;stroke:url(#flow);stroke-width:1.2;opacity:.5;stroke-dasharray:160 40;animation:drift 14s linear infinite}
+@keyframes drift{to{stroke-dashoffset:-400}}
+.stage .halo{fill:var(--bronze);opacity:.16;transition:fill .8s,opacity .8s}
+.stage .core{fill:var(--bronze);transition:fill .8s}
+.stage .halo.lit{fill:var(--gold);opacity:.22}
+.stage .core.lit{fill:var(--hi)}
+.stage .hull{fill:var(--gold)} .stage .pole{stroke:var(--bronze);stroke-width:1.6} .stage .mast{stroke:var(--gold);stroke-width:1.4} .stage .lamp{fill:var(--hi);filter:drop-shadow(0 0 5px var(--hi))}
+.st-b,.st-c,.st-lb,.st-lc,.st-boat1,.st-boat2{opacity:0;transition:opacity .8s ease,transform 3s ease-in-out}
+.st-q{fill:var(--gold)!important;font-size:26px!important;font-family:var(--latin)!important;transition:opacity .6s;animation:blink 1.6s ease-in-out infinite}
+.st-la{transition:opacity .8s}
+.s1 .st-b,.s1 .st-lb{opacity:1}
+.s2 .st-q{opacity:0;animation:none}
+.s2 .st-boat1{opacity:1;transform:translate(-252px,18px)}
+.s2 .st-a-core{fill:var(--hi);transition:fill .8s 2.7s}
+.s2 .st-la{opacity:0;transition:opacity .8s 2.7s}
+.s3 .st-boat1{opacity:0}
+.s3 .st-c,.s3 .st-lc{opacity:1}
+.s3 .st-boat2{opacity:1;transform:translate(104px,-84px)}
+.s3 .st-c-core{fill:var(--hi);transition:fill .8s 2.9s}
+.cap{font-family:var(--serif);font-weight:900;font-size:clamp(1.1rem,3.6vw,1.5rem);text-align:center;padding:6px 16px 0;min-height:3.2em;display:grid;place-items:center;text-wrap:balance}
+.ctl{display:flex;justify-content:center;align-items:center;gap:12px;padding:6px 16px 18px;flex-wrap:wrap}
+.sdots{display:flex;gap:6px}
+.sdot{width:30px;height:6px;border-radius:99px;border:0;padding:0;cursor:pointer;background:var(--line)}
+.sdot[aria-current="true"]{background:linear-gradient(90deg,var(--bronze),var(--hi))}
+.bar i{transform-origin:left center;animation:grow .9s ease-out}
+@keyframes grow{from{transform:scaleX(0)}}
+.step{animation:pop .5s ease-out backwards;animation-delay:calc(var(--i) * .14s)}
+@media (prefers-reduced-motion: reduce){.stage .wave,.st-q,.bar i,.step{animation:none}.st-b,.st-c,.st-lb,.st-lc,.st-boat1,.st-boat2,.stage .core,.st-la{transition:none!important}}
+.notice{border:1px dashed var(--gold);border-radius:12px;padding:8px 14px;color:var(--gold);font-size:.88rem;text-align:center;margin-block:-28px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
 .pop{animation:pop .35s ease-out}
 @keyframes pop{from{transform:translateY(6px);opacity:.4}}
@@ -203,13 +235,41 @@ legend{padding:0 6px}
     </div>
   </header>
 
-  <p class="notice">這是展示版。畫面上的人物都是示範資料；你填寫的卡片只會留在這個分頁，重新整理就會消失，不會上傳到任何地方。</p>
+  <section aria-labelledby="story-h">
+    <h2 id="story-h" hidden>擺渡人怎麼運作</h2>
+    <div class="story">
+      <svg id="stage" class="stage" viewBox="0 0 520 250" role="img" aria-label="動畫：卡住的人被剛走過的人接上，之後再去幫下一個人">
+        <path class="wave" d="M-10,120 C80,95 170,150 260,122 S440,95 530,125"/>
+        <path class="wave" d="M-10,165 C90,190 180,140 280,168 S450,190 530,160"/>
+        <path class="wave" d="M-10,208 C100,190 200,225 300,205 S460,190 530,212"/>
+        <g class="st-c"><circle cx="260" cy="58" r="24" class="halo"/><circle cx="260" cy="58" r="8" class="core st-c-core"/><circle cx="257" cy="55" r="2.2" fill="#fff"/></g>
+        <text class="st-lc" x="260" y="28" text-anchor="middle">下一個卡住的人</text>
+        <g><circle cx="90" cy="168" r="26" class="halo"/><circle cx="90" cy="168" r="9" class="core st-a-core"/><circle cx="87" cy="165" r="2.4" fill="#fff"/></g>
+        <text x="90" y="205" text-anchor="middle">小安</text>
+        <text class="st-la sub" x="90" y="224" text-anchor="middle">卡在：作品集怎麼做</text>
+        <text class="st-q" x="90" y="136" text-anchor="middle">？</text>
+        <g class="st-b"><circle cx="430" cy="148" r="26" class="halo lit"/><circle cx="430" cy="148" r="9" class="core lit"/><circle cx="427" cy="145" r="2.4" fill="#fff"/></g>
+        <text class="st-lb" x="430" y="185" text-anchor="middle">阿哲</text>
+        <text class="st-lb sub" x="430" y="204" text-anchor="middle">去年剛做完</text>
+        <g class="st-boat1"><g transform="translate(392,158) scale(-1,1)"><path class="hull" d="M-20 0 Q0 13 22 -2 L15 5 Q0 11 -15 5 Z"/><line class="pole" x1="-5" y1="-14" x2="-22" y2="9"/><line class="mast" x1="6" y1="2" x2="6" y2="-13"/><circle class="lamp" cx="6" cy="-16" r="3.6"/></g></g>
+        <g class="st-boat2"><g transform="translate(128,158)"><path class="hull" d="M-20 0 Q0 13 22 -2 L15 5 Q0 11 -15 5 Z"/><line class="pole" x1="-5" y1="-14" x2="-22" y2="9"/><line class="mast" x1="6" y1="2" x2="6" y2="-13"/><circle class="lamp" cx="6" cy="-16" r="3.6"/></g></g>
+      </svg>
+      <p class="cap" id="cap" aria-live="polite">卡住的時候，最難的是不知道該問誰。</p>
+      <div class="ctl">
+        <span id="sdots" class="sdots"></span>
+        <button type="button" class="btn-soft" id="replay">重播</button>
+        <button type="button" class="btn" data-go="me">點亮我的燈</button>
+      </div>
+    </div>
+  </section>
+
+  <p class="notice">展示版：人物為示範資料，你填的卡片只留在這個分頁，不會上傳。</p>
 
   <section id="map" aria-labelledby="map-h">
     <div class="sec-head">
       <span class="eyebrow">即時人脈地圖</span>
       <h2 id="map-h">渡口星圖</h2>
-      <p class="muted">每盞燈是一個人。小船從「剛做成這件事的人」划向「正卡在這件事的人」。點任何一盞燈，可以看他的卡片。</p>
+      <p class="muted">每盞燈是一個人，小船划向被幫助的人。點一盞燈看他的卡片。</p>
     </div>
     <div class="hud" aria-live="polite">
       <div><b id="s-people">0</b><span>人已加入</span></div>
@@ -225,32 +285,10 @@ legend{padding:0 6px}
     <div id="nodeinfo"></div>
   </section>
 
-  <section aria-labelledby="why-h">
-    <div class="sec-head">
-      <span class="eyebrow">為什麼需要擺渡人</span>
-      <h2 id="why-h" class="lead">卡住的時候，最難的往往不是問題本身，<br>而是不知道該問誰。</h2>
-    </div>
-    <div class="pains">
-      <div class="pain">
-        <h3>不知道誰走過</h3>
-        <p class="muted">想轉領域、申請計畫、做出第一個產品。校園裡明明有人上學期才做完，你卻不知道他是誰。</p>
-      </div>
-      <div class="pain">
-        <h3>不敢開口問</h3>
-        <p class="muted">教授和業界前輩離得太遠。怕打擾、怕問題太淺，訊息寫了又刪，最後還是自己摸索。</p>
-      </div>
-      <div class="pain">
-        <h3>經驗年年歸零</h3>
-        <p class="muted">學長姐一畢業，走過的路就跟著離開。下一屆的人，又從同一個地方重新跌倒一次。</p>
-      </div>
-    </div>
-    <p class="answer">擺渡人的回答是：<b>讓剛上岸的人被看見。</b>他們離你最近、細節記得最清楚，也最願意回頭說一句「我當時是這樣過來的」。校園裡最大的資源不是名人，是彼此。</p>
-  </section>
-
   <section aria-labelledby="how-h">
     <div class="sec-head">
       <span class="eyebrow">怎麼用</span>
-      <h2 id="how-h">三步開始，約一分鐘</h2>
+      <h2 id="how-h">三步開始</h2>
     </div>
     <ol class="steps">
       <li><button type="button" class="stepbtn" data-go="me"><span class="num">1</span><span><b>填寫我的卡片</b><span>寫下最近完成的事，和現在卡住的事。</span></span></button></li>
@@ -263,7 +301,7 @@ legend{padding:0 6px}
     <div class="sec-head">
       <span class="eyebrow">第 1 步</span>
       <h2 id="me-h">填寫我的卡片</h2>
-      <p class="muted">規則只有一條：先渡人，再被渡。至少寫一件你最近完成的事，才能尋找擺渡人。</p>
+      <p class="muted">先渡人，再被渡：至少寫一件你最近完成的事。</p>
     </div>
     <div id="signedout" class="empty" hidden>要填寫卡片，請先登入再開啟這個頁面。</div>
     <form id="cardform" class="card" novalidate>
@@ -313,7 +351,7 @@ legend{padding:0 6px}
     <div class="sec-head">
       <span class="eyebrow">第 2 步</span>
       <h2 id="guide-h">尋找擺渡人</h2>
-      <p class="muted">按下按鈕，系統會讀過所有卡片，挑出最多三位剛做成這件事的人，告訴你為什麼是他，並替你寫好可以直接問的第一句話。</p>
+      <p class="muted">找出最多三位剛做成這件事的人，並替你想好第一句話。</p>
     </div>
     <div class="actions">
       <button type="button" id="find" class="btn">尋找擺渡人</button>
@@ -326,7 +364,7 @@ legend{padding:0 6px}
     <div class="sec-head">
       <span class="eyebrow">第 3 步</span>
       <h2 id="give-h">回頭渡一個人</h2>
-      <p class="muted">這些人卡住的事，正是你最近做成的事。你的一句話，可能省下他一個月。</p>
+      <p class="muted">他們卡住的事，正是你做成過的事。</p>
     </div>
     <div id="give" class="grid"></div>
   </section>
@@ -335,7 +373,7 @@ legend{padding:0 6px}
     <div class="sec-head">
       <span class="eyebrow">接力路徑</span>
       <h2 id="relay-h">一程接一程 <span class="badge" id="relay-badge" hidden>示範</span></h2>
-      <p class="muted">幫你的人，自己也有卡住的事，再往前還有人接。由下往上讀，就是一條從你出發的互助航線。</p>
+      <p class="muted">由下往上讀：幫你的人，也有人幫他。</p>
     </div>
     <div id="relay" class="relay"></div>
   </section>
@@ -344,7 +382,7 @@ legend{padding:0 6px}
     <div class="sec-head">
       <span class="eyebrow">問題分類</span>
       <h2 id="heat-h">哪些渡口最多人在等 <span class="badge" id="heat-badge" hidden>示範</span></h2>
-      <p class="muted">依問題類別統計：有多少人卡在這裡，其中多少人已經等到船。哪一類最缺擺渡人，就是學校與系所最值得投入資源的地方。</p>
+      <p class="muted">每一類問題有多少人卡住、多少人已等到船。</p>
     </div>
     <div class="panel"><div id="heat" class="heat"></div></div>
   </section>
@@ -363,7 +401,7 @@ legend{padding:0 6px}
     <div class="sec-head">
       <span class="eyebrow">邀請</span>
       <h2 id="share-h">邀更多人上船</h2>
-      <p class="muted">讓對方掃 QR code 或打開連結。選「我的卡片」，對方一進來就會先看到你的卡片。</p>
+      <p class="muted">掃 QR code 或打開連結即可加入。</p>
     </div>
     <div class="panel share">
       <div class="qr" id="qrbox"><canvas id="qr" width="10" height="10" aria-label="QR code"></canvas></div>
@@ -826,6 +864,33 @@ legend{padding:0 6px}
     if (reduce) draw();
   });
   if (window.ResizeObserver) new ResizeObserver(resize).observe(cv); else window.addEventListener("resize", resize);
+
+  /* ---------- opening story ---------- */
+  var CAPS = ["卡住的時候，最難的是不知道該問誰。", "其實，有人才剛渡過同一段河。", "擺渡人把你們接上，連第一句話都替你想好。", "被渡過的人，再回頭渡下一個。"];
+  var HOLD = [3200, 3200, 4800], sceneTimer = null, storyStarted = false;
+  function setScene(n, auto){
+    clearTimeout(sceneTimer);
+    var cls = "stage";
+    for (var i = 1; i <= n; i++) cls += " s" + i;
+    $("stage").setAttribute("class", cls);
+    $("cap").textContent = CAPS[n];
+    Array.prototype.forEach.call($("sdots").children, function(d, i){ d.setAttribute("aria-current", String(i === n)); });
+    if (auto && n < CAPS.length - 1) sceneTimer = setTimeout(function(){ setScene(n + 1, true); }, HOLD[n]);
+  }
+  CAPS.forEach(function(c, i){
+    var d = el("button", "sdot"); d.type = "button"; d.setAttribute("aria-label", "第 " + (i + 1) + " 幕：" + c);
+    d.addEventListener("click", function(){ setScene(i, false); });
+    $("sdots").appendChild(d);
+  });
+  $("replay").addEventListener("click", function(){ setScene(0, !reduce); });
+  setScene(reduce ? CAPS.length - 1 : 0, false);
+  if (!reduce){
+    if (window.IntersectionObserver){
+      new IntersectionObserver(function(es, ob){
+        if (es[0].isIntersecting && !storyStarted){ storyStarted = true; ob.disconnect(); setScene(0, true); }
+      }, { threshold: 0.4 }).observe($("stage"));
+    } else setScene(0, true);
+  }
 
   /* ---------- actions ---------- */
   Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function(b){
