@@ -167,6 +167,7 @@ legend{padding:0 6px}
 .btn-soft:hover{border-color:var(--gold)}
 .btn-soft[aria-pressed="true"]{color:var(--btn-ink);background:linear-gradient(180deg,var(--hi),var(--gold));border-color:var(--gold);font-weight:700}
 .btn-soft:disabled{opacity:.55;cursor:not-allowed}
+.pts{font-size:.78rem;color:var(--gold);background:rgba(212,175,106,.12);border-radius:999px;padding:0 10px;font-weight:700}
 .ferried{font-size:.78rem;color:var(--btn-ink);background:linear-gradient(180deg,var(--hi),var(--gold));border-radius:999px;padding:0 10px;font-weight:700}
 .share{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
 .share > *{min-width:0}
@@ -400,6 +401,19 @@ html.showing{overflow:hidden}
     <div id="give" class="grid"></div>
   </section>
 
+  <section id="points" aria-labelledby="points-h">
+    <div class="sec-head">
+      <span class="eyebrow">回饋</span>
+      <h2 id="points-h">渡人，就有渡點</h2>
+      <p class="muted" id="mypts">完成第 1 步，你就會有第一份渡點。</p>
+    </div>
+    <div class="plans">
+      <div class="card plan"><span class="eyebrow">怎麼累積</span><h3>渡點</h3><ul><li>填寫卡片　+10</li><li>每有一人謝謝你渡他　+20</li><li>每有一人想約你聊聊　+5</li></ul><span class="tag">已上線</span></div>
+      <div class="card plan"><span class="eyebrow">等級</span><h3>從初上船到渡口守護者</h3><ul><li>初上船 · 撐篙人 · 老船夫 · 渡口守護者</li><li>等級顯示在你的卡片上</li></ul><span class="tag">已上線</span></div>
+      <div class="card plan"><span class="eyebrow">可以換什麼</span><h3>由學校與企業提供</h3><ul><li>工作坊與活動優先名額</li><li>擺渡證明，可附在申請與履歷</li></ul><span class="tag">規劃中</span></div>
+    </div>
+  </section>
+
   <section aria-labelledby="relay-h">
     <div class="sec-head">
       <span class="eyebrow">接力路徑</span>
@@ -435,7 +449,7 @@ html.showing{overflow:hidden}
       <p class="muted">由學校與企業支持營運。</p>
     </div>
     <div class="plans">
-      <div class="card plan"><span class="eyebrow">個人</span><h3>擺渡</h3><p class="price">免費</p><ul><li>發布卡片、尋找擺渡人</li><li>謝謝你渡我、接力路徑</li></ul><span class="tag">已上線</span></div>
+      <div class="card plan"><span class="eyebrow">個人</span><h3>擺渡</h3><p class="price">免費</p><ul><li>發布卡片、尋找擺渡人</li><li>謝謝你渡我、渡點與等級</li></ul><span class="tag">已上線</span></div>
       <div class="card plan"><span class="eyebrow">學校</span><h3>學校版</h3><p class="price">系所、職涯中心、全校</p><ul><li>專屬場域，學長姐經驗不因畢業中斷</li><li>問題分類統計，看見學生卡在哪</li></ul><span class="tag">規劃中</span></div>
       <div class="card plan"><span class="eyebrow">企業</span><h3>企業版</h3><p class="price">新人到職與經驗傳承</p><ul><li>專屬場域，同事互相擺渡</li><li>也可作為徵才與人才媒合管道</li></ul><span class="tag">規劃中</span></div>
     </div>
@@ -554,6 +568,7 @@ html.showing{overflow:hidden}
     if (p.field) who.appendChild(el("span", "muted small", p.field));
     var real = DEMO.indexOf(p) < 0, n = real ? ferried(p.id) : 0;
     if (n) who.appendChild(el("span", "ferried", "已渡 " + n + " 人"));
+    var pt = ptsOf(p); who.appendChild(el("span", "pts", "渡點 " + pt + " · " + levelOf(pt)));
     if (p.deep){
       var wn = real ? wished(p.id) : 0;
       who.appendChild(el("span", "deep", wn ? "願意深聊 · " + wn + " 人想約" : "願意深聊"));
@@ -598,6 +613,19 @@ html.showing{overflow:hidden}
     return c;
   }
   /* ---------- thanks, links, QR ---------- */
+  var DEMOPTS = { d1: 10, d2: 70, d3: 50, d4: 30, d5: 10 };
+  function ptsOf(p){
+    if (DEMOPTS[p.id] != null) return DEMOPTS[p.id];
+    return 10 + 20 * ferried(p.id) + 5 * wished(p.id);
+  }
+  function levelOf(n){ return n >= 120 ? "渡口守護者" : n >= 60 ? "老船夫" : n >= 30 ? "撐篙人" : "初上船"; }
+  function renderPoints(){
+    var box = $("mypts"); if (!box) return;
+    var me = people.filter(function(x){ return x.id === myId; })[0];
+    if (!me){ box.textContent = "完成第 1 步，你就會有第一份渡點。"; return; }
+    var n = ptsOf(me);
+    box.textContent = "你目前有 " + n + " 渡點，等級：" + levelOf(n) + "。";
+  }
   function myWish(){ return wish[myId] || []; }
   function wished(id){
     var n = 0;
@@ -792,7 +820,7 @@ html.showing{overflow:hidden}
     $("f-p1").value = m.passed[0] || ""; $("f-p2").value = m.passed[1] || ""; $("f-p3").value = m.passed[2] || "";
     $("f-stuck").value = m.stuck; $("f-cat").value = m.cat; $("f-contact").value = m.contact; $("f-deep").checked = m.deep;
   }
-  function renderAll(){ renderForm(); renderChips(); renderWall(); renderGive(); renderGuides(lastG.list, lastG.note); renderRelay(); renderHeat(); syncSky(); renderThanks(); renderShare(); renderNodeInfo(); applyHash(); }
+  function renderAll(){ renderForm(); renderChips(); renderWall(); renderGive(); renderPoints(); renderGuides(lastG.list, lastG.note); renderRelay(); renderHeat(); syncSky(); renderThanks(); renderShare(); renderNodeInfo(); applyHash(); }
   function setStatus(id, text, err){ var s = $(id); s.textContent = text || ""; s.className = "status" + (err ? " err" : ""); }
 
   /* ---------- river map ---------- */
