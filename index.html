@@ -154,6 +154,14 @@ legend{padding:0 6px}
 .chip[aria-pressed="true"]{border-color:var(--gold);color:var(--btn-ink);background:linear-gradient(180deg,var(--hi),var(--gold));font-weight:700}
 .tag{font-size:.75rem;border:1px solid var(--bronze);color:var(--gold);border-radius:999px;padding:0 9px;align-self:flex-start}
 
+.check{display:flex;gap:10px;align-items:flex-start;font-size:.95rem;cursor:pointer}
+.check input{accent-color:var(--gold);width:18px;height:18px;margin-top:5px;flex:none}
+.deep{font-size:.78rem;color:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:0 10px;font-weight:700}
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.plans > *{min-width:0}
+@media (max-width:760px){.plans{grid-template-columns:1fr}}
+.plan .price{font-family:var(--serif);font-weight:900;font-size:1.35rem;color:var(--hi)}
+.plan ul{margin:0;padding-left:1.2em;color:var(--muted);font-size:.93rem}
 .cardacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
 .btn-soft{font:inherit;font-size:.86rem;border-radius:999px;padding:5px 14px;cursor:pointer;background:transparent;border:1px solid var(--bronze);color:var(--gold)}
 .btn-soft:hover{border-color:var(--gold)}
@@ -360,6 +368,7 @@ html.showing{overflow:hidden}
         <input type="text" id="f-contact" maxlength="60" placeholder="例如 IG 帳號或 email">
         <span class="hint">會公開顯示給所有能開啟這頁的人，不想公開就留空。</span>
       </div>
+      <label class="check" for="f-deep"><input type="checkbox" id="f-deep"><span>我願意提供 30 分鐘的「深度擺渡」一對一諮詢<br><span class="hint">規劃中的付費功能，目前只會在卡片上標示你的意願。</span></span></label>
       <div class="actions">
         <button type="submit" id="save" class="btn">儲存我的卡片</button>
         <button type="button" id="remove" class="btn-plain" hidden>刪除我的卡片</button>
@@ -418,6 +427,19 @@ html.showing{overflow:hidden}
     <div id="wall" class="grid"></div>
   </section>
 
+  <section id="plans" aria-labelledby="plans-h">
+    <div class="sec-head">
+      <span class="eyebrow">方案</span>
+      <h2 id="plans-h">互相擺渡，永遠免費</h2>
+      <p class="muted">進階方案仍在規劃，價格為初步假設。</p>
+    </div>
+    <div class="plans">
+      <div class="card plan"><span class="eyebrow">個人</span><h3>擺渡</h3><p class="price">免費</p><ul><li>發布卡片、尋找擺渡人</li><li>謝謝你渡我、接力路徑</li></ul><span class="tag">已上線</span></div>
+      <div class="card plan"><span class="eyebrow">個人進階</span><h3>深度擺渡</h3><p class="price">每次 NT$500 起</p><ul><li>和剛做成的人一對一談 30 分鐘</li><li>適合申請、轉職、面試等關鍵時刻</li></ul><span class="tag">規劃中，可先登記意願</span></div>
+      <div class="card plan"><span class="eyebrow">學校與企業</span><h3>機構版</h3><p class="price">依人數計費</p><ul><li>專屬場域，成員互相擺渡</li><li>問題分類統計，看見成員卡在哪</li></ul><span class="tag">規劃中</span></div>
+    </div>
+  </section>
+
   <section id="share" aria-labelledby="share-h">
     <div class="sec-head">
       <span class="eyebrow">邀請</span>
@@ -463,7 +485,7 @@ html.showing{overflow:hidden}
   var db = null, user = null, sample = null, myId = null;
   var people = [], loaded = false, bootDone = false, formFilled = false, confirmRemove = false, saving = false, filterCat = "";
   var SITE = location.origin + location.pathname;
-  var thanks = {}, thanksBusy = false, shareMode = "site", focusFor = "", lastG = { list: [], note: undefined }, shownLink = "";
+  var wish = {}, thanks = {}, thanksBusy = false, shareMode = "site", focusFor = "", lastG = { list: [], note: undefined }, shownLink = "";
   var SHOWCASE = true;   // the public showcase build turns this on
   var MIN = 4; // shared two-character fragments needed to count as a match
   var CATS = ["升學與申請", "實習與求職", "轉換領域", "研究與論文", "創業與競賽", "技能自學", "社團與領導", "其他"];
@@ -471,9 +493,9 @@ html.showing{overflow:hidden}
 
   var DEMO = [
     { id: "d1", nick: "小安", field: "社會系大三", passed: ["第一次做完 20 人的使用者訪談"], stuck: "想轉做 UX 研究，不知道作品集要放什麼", cat: "轉換領域", contact: "", at: 5 },
-    { id: "d2", nick: "阿哲", field: "心理所碩一", passed: ["從非設計系拿到 UX 研究實習，作品集重做過三版"], stuck: "想找第一批願意試用產品的使用者", cat: "創業與競賽", contact: "", at: 4 },
+    { id: "d2", nick: "阿哲", field: "心理所碩一", passed: ["從非設計系拿到 UX 研究實習，作品集重做過三版"], stuck: "想找第一批願意試用產品的使用者", cat: "創業與競賽", contact: "", deep: true, at: 4 },
     { id: "d3", nick: "語彤", field: "資管系大四", passed: ["幫社團產品找到第一批 50 位試用使用者"], stuck: "第一次申請創業競賽，不會寫計畫摘要", cat: "創業與競賽", contact: "", at: 3 },
-    { id: "d4", nick: "柏翰", field: "電機所碩二", passed: ["去年寫創業競賽計畫摘要並進入決賽"], stuck: "要找使用者訪談的受訪者", cat: "研究與論文", contact: "", at: 2 },
+    { id: "d4", nick: "柏翰", field: "電機所碩二", passed: ["去年寫創業競賽計畫摘要並進入決賽"], stuck: "要找使用者訪談的受訪者", cat: "研究與論文", contact: "", deep: true, at: 2 },
     { id: "d5", nick: "宜庭", field: "經濟系大二", passed: ["自學 Python 做出第一個爬蟲"], stuck: "想申請交換，不知道怎麼準備讀書計畫", cat: "升學與申請", contact: "", at: 1 }
   ];
 
@@ -488,7 +510,7 @@ html.showing{overflow:hidden}
     d = d || {};
     var passed = Array.isArray(d.passed) ? d.passed.map(function(p){ return str(p, 60); }).filter(Boolean).slice(0, 3) : [];
     return { id: id, nick: str(d.nick, 20) || "匿名", field: str(d.field, 30), passed: passed, stuck: str(d.stuck, 80),
-             cat: CATS.indexOf(d.cat) >= 0 ? d.cat : "其他", contact: str(d.contact, 60), at: Number(d.at) || 0 };
+             cat: CATS.indexOf(d.cat) >= 0 ? d.cat : "其他", contact: str(d.contact, 60), deep: d.deep === true, at: Number(d.at) || 0 };
   }
   function me(){ return people.filter(function(p){ return p.id === myId; })[0] || null; }
   function isDemo(){ return !people.length; }
@@ -531,6 +553,10 @@ html.showing{overflow:hidden}
     if (p.field) who.appendChild(el("span", "muted small", p.field));
     var real = DEMO.indexOf(p) < 0, n = real ? ferried(p.id) : 0;
     if (n) who.appendChild(el("span", "ferried", "已渡 " + n + " 人"));
+    if (p.deep){
+      var wn = real ? wished(p.id) : 0;
+      who.appendChild(el("span", "deep", wn ? "可深度擺渡 · " + wn + " 人想預約" : "可深度擺渡"));
+    }
     c.appendChild(who);
     if (p.passed.length){
       c.appendChild(el("span", "label passed", "最近完成的事"));
@@ -553,16 +579,39 @@ html.showing{overflow:hidden}
         tb.type = "button"; tb.setAttribute("aria-pressed", String(on));
         tb.addEventListener("click", function(){ toggleThanks(p.id, tb); });
         acts.appendChild(tb);
+        if (p.deep){
+          var won = myWish().indexOf(p.id) >= 0;
+          var wb = el("button", "btn-soft", won ? "已登記預約意願（再按可取消）" : "想預約深度擺渡");
+          wb.type = "button"; wb.setAttribute("aria-pressed", String(won));
+          wb.addEventListener("click", function(){ toggleWish(p.id, wb); });
+          acts.appendChild(wb);
+        }
       }
       var cb = el("button", "btn-soft", "複製這張卡片的連結");
       cb.type = "button";
       cb.addEventListener("click", function(){ copyText(linkOf(p.id), cb, "複製這張卡片的連結"); });
       acts.appendChild(cb);
       c.appendChild(acts);
+      if (p.deep && db && myId && p.id !== myId) c.appendChild(el("p", "hint", "深度擺渡尚未開放，按下只會登記你的意願，不會收費。"));
     }
     return c;
   }
   /* ---------- thanks, links, QR ---------- */
+  function myWish(){ return wish[myId] || []; }
+  function wished(id){
+    var n = 0;
+    for (var from in wish) if (from !== id && wish[from].indexOf(id) >= 0) n++;
+    return n;
+  }
+  function toggleWish(id, btn){
+    if (thanksBusy || !db || !myId || id === myId) return;
+    var list = myWish().slice(), i = list.indexOf(id);
+    if (i >= 0) list.splice(i, 1); else list.push(id);
+    thanksBusy = true; btn.disabled = true;
+    db.doc("wish/" + myId).set({ to: list.slice(-50), at: Date.now() }).catch(function(){
+      btn.textContent = "沒有成功，請再按一次";
+    }).then(function(){ thanksBusy = false; btn.disabled = false; });
+  }
   function myThanks(){ return thanks[myId] || []; }
   function ferried(id){
     var n = 0;
@@ -740,7 +789,7 @@ html.showing{overflow:hidden}
     formFilled = true;
     $("f-nick").value = m.nick === "匿名" ? "" : m.nick; $("f-field").value = m.field;
     $("f-p1").value = m.passed[0] || ""; $("f-p2").value = m.passed[1] || ""; $("f-p3").value = m.passed[2] || "";
-    $("f-stuck").value = m.stuck; $("f-cat").value = m.cat; $("f-contact").value = m.contact;
+    $("f-stuck").value = m.stuck; $("f-cat").value = m.cat; $("f-contact").value = m.contact; $("f-deep").checked = m.deep;
   }
   function renderAll(){ renderForm(); renderChips(); renderWall(); renderGive(); renderGuides(lastG.list, lastG.note); renderRelay(); renderHeat(); syncSky(); renderThanks(); renderShare(); renderNodeInfo(); applyHash(); }
   function setStatus(id, text, err){ var s = $(id); s.textContent = text || ""; s.className = "status" + (err ? " err" : ""); }
@@ -1070,7 +1119,7 @@ html.showing{overflow:hidden}
     if (!db || !myId){ setStatus("formstatus", "目前無法儲存，請登入後再試。", true); return; }
     var passed = ["f-p1", "f-p2", "f-p3"].map(function(i){ return str($(i).value, 60); }).filter(Boolean);
     var data = { nick: str($("f-nick").value, 20), field: str($("f-field").value, 30), passed: passed, stuck: str($("f-stuck").value, 80),
-                 cat: CATS.indexOf($("f-cat").value) >= 0 ? $("f-cat").value : "其他", contact: str($("f-contact").value, 60), at: Date.now() };
+                 cat: CATS.indexOf($("f-cat").value) >= 0 ? $("f-cat").value : "其他", contact: str($("f-contact").value, 60), deep: $("f-deep").checked, at: Date.now() };
     if (!data.nick){ setStatus("formstatus", "請填寫稱呼。", true); $("f-nick").focus(); return; }
     if (!passed.length){ setStatus("formstatus", "請至少寫一件你最近完成的事。", true); $("f-p1").focus(); return; }
     saving = true; $("save").disabled = true; setStatus("formstatus", "儲存中…");
@@ -1157,7 +1206,7 @@ html.showing{overflow:hidden}
 
   /* ---------- showcase build: an in-memory store, nothing leaves this tab ---------- */
   function localDb(){
-    var store = { people: {}, thanks: {} }, subs = { people: [], thanks: [] };
+    var store = { people: {}, thanks: {}, wish: {} }, subs = { people: [], thanks: [], wish: [] };
     DEMO.forEach(function(p){ store.people[p.id] = p; });
     function emit(c){
       var docs = Object.keys(store[c]).map(function(id){ return { id: id, data: function(){ return store[c][id]; } }; });
@@ -1207,6 +1256,14 @@ html.showing{overflow:hidden}
         thanks = t;
         nodes.forEach(function(n){ if (ferried(n.id) > before[n.id]) n.born = frame; });   // a ripple on the lantern that was thanked
         renderAll();
+      }, function(){});
+      db.collection("wish").onSnapshot(function(snap){
+        var t = {};
+        snap.docs.forEach(function(d){
+          var to = (d.data() || {}).to;
+          t[d.id] = (Array.isArray(to) ? to : []).filter(function(x){ return typeof x === "string"; }).slice(0, 50);
+        });
+        wish = t; renderAll();
       }, function(){});
       renderAll();
     });
