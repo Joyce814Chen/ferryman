@@ -369,7 +369,7 @@ html.showing{overflow:hidden}
         <input type="text" id="f-contact" maxlength="60" placeholder="例如 IG 帳號或 email">
         <span class="hint">會公開顯示給所有能開啟這頁的人，不想公開就留空。</span>
       </div>
-      <label class="check" for="f-deep"><input type="checkbox" id="f-deep"><span>我願意提供 30 分鐘的「深度擺渡」一對一諮詢<br><span class="hint">規劃中的付費功能，目前只會在卡片上標示你的意願。</span></span></label>
+      <label class="check" for="f-deep"><input type="checkbox" id="f-deep"><span>我願意和卡住的人聊 30 分鐘<br><span class="hint">免費。會在你的卡片上標示，讓想深聊的人知道。</span></span></label>
       <div class="actions">
         <button type="submit" id="save" class="btn">儲存我的卡片</button>
         <button type="button" id="remove" class="btn-plain" hidden>刪除我的卡片</button>
@@ -431,13 +431,13 @@ html.showing{overflow:hidden}
   <section id="plans" aria-labelledby="plans-h">
     <div class="sec-head">
       <span class="eyebrow">方案</span>
-      <h2 id="plans-h">互相擺渡，永遠免費</h2>
-      <p class="muted">進階方案仍在規劃，價格為初步假設。</p>
+      <h2 id="plans-h">學生永遠免費</h2>
+      <p class="muted">由學校與企業支持營運。</p>
     </div>
     <div class="plans">
       <div class="card plan"><span class="eyebrow">個人</span><h3>擺渡</h3><p class="price">免費</p><ul><li>發布卡片、尋找擺渡人</li><li>謝謝你渡我、接力路徑</li></ul><span class="tag">已上線</span></div>
-      <div class="card plan"><span class="eyebrow">個人進階</span><h3>深度擺渡</h3><p class="price">每次 NT$500 起</p><ul><li>和剛做成的人一對一談 30 分鐘</li><li>適合申請、轉職、面試等關鍵時刻</li></ul><span class="tag">規劃中，可先登記意願</span></div>
-      <div class="card plan"><span class="eyebrow">學校與企業</span><h3>機構版</h3><p class="price">依人數計費</p><ul><li>專屬場域，成員互相擺渡</li><li>問題分類統計，看見成員卡在哪</li></ul><span class="tag">規劃中</span></div>
+      <div class="card plan"><span class="eyebrow">學校</span><h3>學校版</h3><p class="price">系所、職涯中心、全校</p><ul><li>專屬場域，學長姐經驗不因畢業中斷</li><li>問題分類統計，看見學生卡在哪</li></ul><span class="tag">規劃中</span></div>
+      <div class="card plan"><span class="eyebrow">企業</span><h3>企業版</h3><p class="price">新人到職與經驗傳承</p><ul><li>專屬場域，同事互相擺渡</li><li>也可作為徵才與人才媒合管道</li></ul><span class="tag">規劃中</span></div>
     </div>
   </section>
 
@@ -556,7 +556,7 @@ html.showing{overflow:hidden}
     if (n) who.appendChild(el("span", "ferried", "已渡 " + n + " 人"));
     if (p.deep){
       var wn = real ? wished(p.id) : 0;
-      who.appendChild(el("span", "deep", wn ? "可深度擺渡 · " + wn + " 人想預約" : "可深度擺渡"));
+      who.appendChild(el("span", "deep", wn ? "願意深聊 · " + wn + " 人想約" : "願意深聊"));
     }
     c.appendChild(who);
     if (p.passed.length){
@@ -582,7 +582,7 @@ html.showing{overflow:hidden}
         acts.appendChild(tb);
         if (p.deep){
           var won = myWish().indexOf(p.id) >= 0;
-          var wb = el("button", "btn-soft", won ? "已登記預約意願（再按可取消）" : "想預約深度擺渡");
+          var wb = el("button", "btn-soft", won ? "已登記想約（再按可取消）" : "想約他聊 30 分鐘");
           wb.type = "button"; wb.setAttribute("aria-pressed", String(won));
           wb.addEventListener("click", function(){ toggleWish(p.id, wb); });
           acts.appendChild(wb);
@@ -593,7 +593,7 @@ html.showing{overflow:hidden}
       cb.addEventListener("click", function(){ copyText(linkOf(p.id), cb, "複製這張卡片的連結"); });
       acts.appendChild(cb);
       c.appendChild(acts);
-      if (p.deep && db && myId && p.id !== myId) c.appendChild(el("p", "hint", "深度擺渡尚未開放，按下只會登記你的意願，不會收費。"));
+      if (p.deep && db && myId && p.id !== myId) c.appendChild(el("p", "hint", "按下只會登記你想約的意願，不會收費。"));
     }
     return c;
   }
