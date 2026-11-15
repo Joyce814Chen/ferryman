@@ -272,6 +272,7 @@ html.showing{overflow:hidden}
         <span id="sdots" class="sdots"></span>
         <button type="button" class="btn-soft" id="replay">重播</button>
         <button type="button" class="btn" data-go="me">點亮我的燈</button>
+        <button type="button" class="btn-soft" id="tryit" hidden>一鍵體驗（自動示範）</button>
       </div>
     </div>
   </section>
@@ -463,6 +464,7 @@ html.showing{overflow:hidden}
   var people = [], loaded = false, bootDone = false, formFilled = false, confirmRemove = false, saving = false, filterCat = "";
   var SITE = location.origin + location.pathname;
   var thanks = {}, thanksBusy = false, shareMode = "site", focusFor = "", lastG = { list: [], note: undefined }, shownLink = "";
+  var SHOWCASE = true;   // the public showcase build turns this on
   var MIN = 4; // shared two-character fragments needed to count as a match
   var CATS = ["升學與申請", "實習與求職", "轉換領域", "研究與論文", "創業與競賽", "技能自學", "社團與領導", "其他"];
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1107,11 +1109,11 @@ html.showing{overflow:hidden}
     function fallback(note){
       var hits = others.map(function(p){ return { p: p, best: bestPassed(m.stuck, p) }; })
         .filter(function(h){ return h.best.score >= MIN; }).sort(function(a, b){ return b.best.score - a.best.score; }).slice(0, 3)
-        .map(function(h){ return { p: h.p, why: "他做成過：「" + h.best.text + "」", opener: "" }; });
+        .map(function(h){ return { p: h.p, why: "他最近做成過：「" + h.best.text + "」，正是你卡住的這一步。", opener: "想請教你「" + h.best.text + "」的經驗：如果重來一次，你會先做哪一件事？" }; });
       renderGuides(hits, "目前沒有人做成過你卡住的事。有新卡片後再找一次。");
       setStatus("findstatus", note || "");
     }
-    if (!sample){ fallback("這裡用的是關鍵字比對。"); return; }
+    if (!sample){ fallback("展示版以關鍵字比對示範；多人版使用語意配對。"); return; }
 
     finding = true; $("find").disabled = true; $("find").classList.add("scan"); setStatus("findstatus", "正在讀 " + others.length + " 張卡片…");
     var roster = others.map(function(p, i){ return { n: i + 1, field: p.field, passed: p.passed }; });
@@ -1131,6 +1133,26 @@ html.showing{overflow:hidden}
     }).catch(function(err){
       fallback(err && err.code === "rate_limited" ? "現在太多人在用，先用關鍵字比對，稍後可再試。" : "這次改用關鍵字比對。");
     }).then(function(){ finding = false; $("find").disabled = false; $("find").classList.remove("scan"); });
+  });
+
+  /* ---------- one-tap walkthrough (showcase only): fills a sample card, lights the lantern, then finds a ferryman ---------- */
+  $("tryit").addEventListener("click", function(){
+    if (!db || !myId) return;
+    var wait = 300;
+    if (!me()){
+      $("f-nick").value = $("f-nick").value || "訪客";
+      $("f-field").value = $("f-field").value || "體驗用卡片";
+      $("f-p1").value = $("f-p1").value || "上學期第一次參加創業競賽並寫完計畫摘要";
+      $("f-stuck").value = $("f-stuck").value || "想轉做 UX 研究，不知道作品集要放什麼";
+      $("f-cat").value = "轉換領域";
+      var f = $("cardform");
+      if (f.requestSubmit) f.requestSubmit(); else $("save").click();
+      wait = reduce ? 600 : 6800;
+    }
+    setTimeout(function(){
+      $("guide").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      $("find").click();
+    }, wait);
   });
 
   /* ---------- showcase build: an in-memory store, nothing leaves this tab ---------- */
@@ -1157,6 +1179,7 @@ html.showing{overflow:hidden}
     if (!reduce) requestAnimationFrame(tick);
     var use = window.claude && window.claude.use ? function(n){ return window.claude.use(n).catch(function(){ return null; }); }
                                                  : function(){ return Promise.resolve(null); };
+    $("tryit").hidden = !SHOWCASE;
     Promise.all([use("db"), use("user"), use("sample")]).then(function(r){
       db = localDb(); user = null; sample = null;
       return "local-me";
